@@ -280,8 +280,8 @@ config.keys = {
   { key = 't', mods = 'CTRL', action = act.SpawnTab 'CurrentPaneDomain' },
   { key = 'w', mods = 'CTRL', action = act.CloseCurrentTab { confirm = false } },
 
-  { key = 'LeftArrow', mods = 'CTRL|SHIFT', action = act.ActivateTabRelative(-1) },
-  { key = 'RightArrow', mods = 'CTRL|SHIFT', action = act.ActivateTabRelative(1) },
+  { key = 'LeftArrow', mods = 'ALT', action = act.ActivateTabRelative(-1) },
+  { key = 'RightArrow', mods = 'ALT', action = act.ActivateTabRelative(1) },
 }
 
 return config
