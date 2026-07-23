@@ -43,7 +43,11 @@ wezterm.on('format-tab-title', function(tab, tabs, panes, conf, hover, max_width
   -- The fancy bar sizes tabs itself; only retro needs the cell budget honored.
   local cap = TAB_STYLE:sub(1, 5) == 'retro' and max_width - 4 or 24
   title = wezterm.truncate_right(title, cap)
-  local inactive_fg = hover and '#CCCCCC' or '#8A8A90'
+  -- Deliberately NOT using the `hover` arg: with the fancy bar it is computed
+  -- from character-cell columns while tabs render in the proportional titlebar
+  -- font, so it often flags the wrong tab (wezterm#5164, wezterm#3481). Hover
+  -- feedback comes from tab_bar.inactive_tab_hover instead.
+  local inactive_fg = '#8A8A90'
   local idx = tostring(tab.tab_index + 1)
   if not tab.is_active then
     local text = ' ' .. title .. ' '
