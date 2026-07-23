@@ -273,6 +273,12 @@ config.keys = {
   -- The default Ctrl+Shift+W hardcodes confirm=true and ignores NeverPrompt
   { key = 'w', mods = 'CTRL|SHIFT', action = act.CloseCurrentTab { confirm = false } },
 
+  -- Browser-style tab keys. These shadow the control chars in every pane:
+  -- Ctrl+T never reaches terminal apps (Claude Code's todo toggle, bash
+  -- transpose) and Ctrl+W won't delete-word in shells.
+  { key = 't', mods = 'CTRL', action = act.SpawnTab 'CurrentPaneDomain' },
+  { key = 'w', mods = 'CTRL', action = act.CloseCurrentTab { confirm = false } },
+
   { key = 'LeftArrow', mods = 'CTRL|SHIFT', action = act.ActivateTabRelative(-1) },
   { key = 'RightArrow', mods = 'CTRL|SHIFT', action = act.ActivateTabRelative(1) },
 }
