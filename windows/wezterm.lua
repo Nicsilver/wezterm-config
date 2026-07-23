@@ -282,6 +282,17 @@ config.keys = {
 
   { key = 'LeftArrow', mods = 'ALT', action = act.ActivateTabRelative(-1) },
   { key = 'RightArrow', mods = 'ALT', action = act.ActivateTabRelative(1) },
+
+  -- Detach the current tab into its own window (no mouse tear-off upstream:
+  -- wezterm#549). Moves the focused PANE, which equals the tab as long as the
+  -- tab isn't split.
+  {
+    key = 'UpArrow',
+    mods = 'ALT',
+    action = wezterm.action_callback(function(window, pane)
+      pane:move_to_new_window()
+    end),
+  },
 }
 
 return config
