@@ -43,22 +43,19 @@ wezterm.on('format-tab-title', function(tab, tabs, panes, conf, hover, max_width
   -- The fancy bar sizes tabs itself; only retro needs the cell budget honored.
   local cap = TAB_STYLE:sub(1, 5) == 'retro' and max_width - 4 or 24
   title = wezterm.truncate_right(title, cap)
-  -- Deliberately NOT using the `hover` arg: with the fancy bar it is computed
-  -- from character-cell columns while tabs render in the proportional titlebar
-  -- font, so it often flags the wrong tab (wezterm#5164, wezterm#3481). Hover
-  -- feedback comes from tab_bar.inactive_tab_hover instead.
-  local inactive_fg = '#8A8A90'
   local idx = tostring(tab.tab_index + 1)
   if not tab.is_active then
     local text = ' ' .. title .. ' '
     if TAB_STYLE == 'fancy-index' then
       text = ' ' .. idx .. '  ' .. title .. ' '
     end
-    return {
-      { Background = { Color = BG } },
-      { Foreground = { Color = inactive_fg } },
-      { Text = text },
-    }
+    -- Inactive tabs return TEXT ONLY, no colors, on purpose. Explicit colors
+    -- pin the tab and kill wezterm's native hover repaint, and the handler's
+    -- `hover` arg can't replace it: with the fancy bar that flag is computed
+    -- from character-cell columns while tabs render in the proportional
+    -- titlebar font, so it lands on the wrong tab (wezterm#5164, #3481).
+    -- Bare text styles via tab_bar.inactive_tab / inactive_tab_hover instead.
+    return { { Text = text } }
   end
   if TAB_STYLE == 'fancy-blue' then
     return { { Foreground = { Color = '#5594FA' } }, { Text = ' ' .. title .. ' ' } }
