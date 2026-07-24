@@ -32,7 +32,7 @@ local STYLE_ORDER = {
   'steel', 'slate', 'mauve', 'amber', 'green', 'crimson',
   'accent', 'index', 'circled', 'iconid', 'hash', 'gradient',
 }
-local TAB_STYLE = 'steel'
+local TAB_STYLE = 'slate'
 -- GLOBAL can hold a style name from an older roster (e.g. the retro pack);
 -- only honor it if it still exists.
 for _, name in ipairs(STYLE_ORDER) do
@@ -45,7 +45,8 @@ end
 -- glyph/dynamic styles leave the chip on BG and paint inside the title.
 local FILLS = {
   steel   = { bg = '#2B3B58', fg = '#FFFFFF' },
-  slate   = { bg = '#3A3A42', fg = '#FFFFFF' },
+  -- Two visible steps above BG: #3A3A42 disappears on a real #202020 strip.
+  slate   = { bg = '#46464F', fg = '#FFFFFF' },
   mauve   = { bg = '#C6A0F6', fg = '#181926' },
   amber   = { bg = '#D97706', fg = '#141414' },
   green   = { bg = '#39D353', fg = '#0D1117' },
@@ -112,7 +113,8 @@ local function fill_style(tab, _, _, title)
   if not tab.is_active then
     return { { Text = ' ' .. title .. ' ' } }
   end
-  return { { Foreground = { Color = ACTIVE.fg } }, { Text = ' ' .. title .. ' ' } }
+  -- Wider padding on the active chip only — reads as emphasis, like Chrome.
+  return { { Foreground = { Color = ACTIVE.fg } }, { Text = '  ' .. title .. '  ' } }
 end
 for name in pairs(FILLS) do
   STYLES[name] = fill_style
@@ -239,8 +241,10 @@ wezterm.on('format-tab-title', function(tab, tabs, panes, conf, hover, max_width
   -- Universal unseen-output marker on background tabs. Deliberately uncolored:
   -- plain text keeps the native hover repaint alive (explicit colors pin the
   -- tab, and `hover` can't replace it on the fancy bar — wezterm#5164, #3481).
+  -- '•' not '●' — the full-size circle renders huge in the 13pt SF bar font
+  -- and fights the ✳ Claude-busy marker.
   if not tab.is_active and has_unseen(tab) then
-    title = '● ' .. title
+    title = '• ' .. title
   end
   return (STYLES[TAB_STYLE] or STYLES.steel)(tab, tabs, hover, title)
 end)
