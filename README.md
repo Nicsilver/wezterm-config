@@ -2,6 +2,17 @@
 
 My WezTerm setup. Dark single-surface theme (terminal, tab strip and titlebar all one color: `#121212` on Windows, `#202020` on the Mac to match IntelliJ), ANSI palette synced from my IntelliJ color scheme, steel-blue active tab, and tab titles that show the shell's folder name instead of `pwsh.exe`.
 
+## ⚠ One-time migration on the Windows machine — DELETE this section when done
+
+The old monolithic `windows/wezterm.lua` was split into the shared `wezterm.lua` + `windows.lua` (commit `5942342`); `%USERPROFILE%\.wezterm.lua` on the Windows machine is still a full copy of the old config and needs converting to the stub. For the agent doing it:
+
+1. Diff `%USERPROFILE%\.wezterm.lua` against `git show 5942342^:windows/wezterm.lua`. If the machine has local tweaks that never got committed, port them into `windows.lua` (or `wezterm.lua` if they belong in the shared core) first.
+2. Replace `%USERPROFILE%\.wezterm.lua` with the stub from "Install (both platforms)" below, pointing at this clone's path (forward slashes work fine in the Lua string on Windows).
+3. Verify — and beware that a broken config makes wezterm fall back to its DEFAULTS silently, exit code 0, no error on stderr, so actually grep for the custom keys:
+   - `wezterm show-keys` must list `CTRL t -> SpawnTab`, `ALT LeftArrow/RightArrow -> ActivateTabRelative`, and `CTRL v -> PasteFrom(Clipboard)`.
+   - `wezterm ls-fonts` must still print "Will synthesize dim" under `When Intensity=Half`.
+4. Delete this entire section from the README, commit ("Remove the Windows migration note"), and push.
+
 ## Layout
 
 - `wezterm.lua` — the shared config; almost everything lives here. It detects the OS via `wezterm.target_triple` and loads the matching platform module.
