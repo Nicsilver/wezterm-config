@@ -434,7 +434,9 @@ config.colors = {
     -- If the fill ever stops painting, emit it as the FIRST item from the
     -- format-tab-title handler instead — bg_color here can silently lose to
     -- a registered handler for some styles.
-    active_tab = { bg_color = TAB_TINT, fg_color = '#FFFFFF', underline = 'Single' },
+    -- No underline here: the retro bar merges these base attributes under
+    -- every format-tab-title style (fancy ignored it).
+    active_tab = { bg_color = TAB_TINT, fg_color = '#FFFFFF' },
     inactive_tab = { bg_color = BG, fg_color = '#8A8A90' },
     inactive_tab_hover = { bg_color = BG_HOVER, fg_color = '#CCCCCC' },
     new_tab = { bg_color = BG, fg_color = '#8A8A90' },
