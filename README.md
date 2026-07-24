@@ -1,6 +1,6 @@
 # wezterm-config
 
-My WezTerm setup. Dark single-surface theme (terminal, tab strip and titlebar all one color: `#121212` on Windows, `#202020` on the Mac to match IntelliJ), ANSI palette synced from my IntelliJ color scheme, steel-blue active tab, and tab titles that show the shell's folder name instead of `pwsh.exe`.
+My WezTerm setup. Dark single-surface theme (terminal, tab strip and titlebar all one color: `#121212` on Windows, `#202020` on the Mac to match IntelliJ), ANSI palette synced from my IntelliJ color scheme, graphite (slate) active tab, and tab titles that show the shell's folder name instead of `pwsh.exe`.
 
 ## ⚠ One-time migration on the Windows machine — DELETE this section when done
 
@@ -70,5 +70,5 @@ The lua files are heavily commented, and the comments are the real documentation
 
 - **DemiBold body font, OpenGL front end, LCD render target, no hinting.** WezTerm rasterizes with FreeType and its strokes read thinner than the ClearType text you get in Windows Terminal. These four settings together get the closest match. Subpixel AA silently does nothing on the WebGpu front end, so OpenGL is load-bearing.
 - **"Cascadia Mono Dim".** WezTerm only color-dims SGR 2 text when the matched font family has no weight lighter than the one requested. Real Cascadia has Light instances, so wezterm snaps to those and dim text goes spindly instead of darker. The generated font is a static copy of the Regular instance under a unique family name with no other weights, which forces the color-dimming path. Most of a Claude Code session is dim text, so this matters more than it sounds.
-- **Tab style.** Steel-blue background fill (`TAB_TINT`) on the active tab. The fancy tab bar ignores underline/bold/italic attributes from `format-tab-title`, colors only, so the active-tab treatment is a background fill rather than an underline.
+- **Tab style.** Graphite background fill (`TAB_FILL`, slate) on the active tab, wider padding on the active chip, and a `•` prefix on background tabs with unseen output. The fancy tab bar ignores underline/bold/italic attributes from `format-tab-title`, colors only, so the active-tab treatment is a background fill rather than an underline. The 12-style experiment pack (with a Ctrl+Shift+S cycler) is parked at git `031c35a`, the retro shape pack at `2ce5458`.
 - **Close confirmations.** Killing them takes three settings, not one: `window_close_confirmation` only covers the window, the default Ctrl+Shift+W binding hardcodes its own confirm, and the per-tab ✕ overlay is governed by `skip_close_confirmation_for_processes_named` (which replaces the defaults when set, so the stock shells are re-listed).
