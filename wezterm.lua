@@ -21,15 +21,8 @@ wezterm.add_to_config_reload_watch_list(here .. platform_file)
 local BG = platform.bg
 local BG_HOVER = platform.bg_hover
 
--- Tab look. Fancy variants (keep per-tab close buttons): 'fancy-white' |
--- 'fancy-blue' | 'fancy-accent' | 'fancy-accent2' | 'fancy-dot' |
--- 'fancy-index' | 'fancy-tint'. Retro variants (no per-tab close buttons,
--- but real underline/shapes): 'retro-underline' | 'retro-pill' |
--- 'retro-pill-blue' | 'retro-bottom'.
-local TAB_STYLE = 'fancy-tint'
--- Steel-blue fill for the tinted variants; flat BG otherwise.
-local TAB_TINT = (TAB_STYLE == 'fancy-accent2' or TAB_STYLE == 'fancy-tint')
-    and '#2B3B58' or BG
+-- Steel-blue fill for the active tab (fancy bar, per-tab close buttons).
+local TAB_TINT = '#2B3B58'
 
 -- Bare shell titles say nothing; the tab shows the shell's folder instead.
 -- One combined set for both platforms — a fresh pwsh tab reports 'pwsh.exe'
@@ -59,89 +52,17 @@ wezterm.on('format-tab-title', function(tab, tabs, panes, conf, hover, max_width
       end
     end
   end
-  -- The fancy bar sizes tabs itself; only retro needs the cell budget honored.
-  local cap = TAB_STYLE:sub(1, 5) == 'retro' and max_width - 4 or 24
-  title = wezterm.truncate_right(title, cap)
-  local idx = tostring(tab.tab_index + 1)
+  -- The fancy bar sizes tabs itself; the cap just bounds runaway titles.
+  title = wezterm.truncate_right(title, 24)
   if not tab.is_active then
-    local text = ' ' .. title .. ' '
-    if TAB_STYLE == 'fancy-index' then
-      text = ' ' .. idx .. '  ' .. title .. ' '
-    end
     -- Inactive tabs return TEXT ONLY, no colors, on purpose. Explicit colors
     -- pin the tab and kill wezterm's native hover repaint, and the handler's
     -- `hover` arg can't replace it: with the fancy bar that flag is computed
     -- from character-cell columns while tabs render in the proportional
     -- titlebar font, so it lands on the wrong tab (wezterm#5164, #3481).
     -- Bare text styles via tab_bar.inactive_tab / inactive_tab_hover instead.
-    return { { Text = text } }
+    return { { Text = ' ' .. title .. ' ' } }
   end
-  if TAB_STYLE == 'fancy-blue' then
-    return { { Foreground = { Color = '#5594FA' } }, { Text = ' ' .. title .. ' ' } }
-  elseif TAB_STYLE == 'fancy-accent' then
-    return {
-      { Foreground = { Color = '#5594FA' } },
-      { Text = '▎' },
-      { Foreground = { Color = '#FFFFFF' } },
-      { Text = title .. ' ' },
-    }
-  elseif TAB_STYLE == 'fancy-accent2' then
-    return {
-      { Background = { Color = '#2B3B58' } },
-      { Foreground = { Color = '#7FAEFF' } },
-      { Text = '▍' },
-      { Foreground = { Color = '#FFFFFF' } },
-      { Text = title .. ' ' },
-    }
-  elseif TAB_STYLE == 'fancy-dot' then
-    return {
-      { Foreground = { Color = '#5594FA' } },
-      { Text = ' ● ' },
-      { Foreground = { Color = '#FFFFFF' } },
-      { Text = title .. ' ' },
-    }
-  elseif TAB_STYLE == 'fancy-index' then
-    return {
-      { Foreground = { Color = '#5594FA' } },
-      { Text = ' ' .. idx .. '  ' },
-      { Foreground = { Color = '#FFFFFF' } },
-      { Text = title .. ' ' },
-    }
-  elseif TAB_STYLE == 'fancy-tint' then
-    return { { Foreground = { Color = '#FFFFFF' } }, { Text = ' ' .. title .. ' ' } }
-  elseif TAB_STYLE == 'retro-underline' or TAB_STYLE == 'retro-bottom' then
-    return {
-      { Background = { Color = BG } },
-      { Foreground = { Color = '#FFFFFF' } },
-      { Attribute = { Underline = 'Single' } },
-      { Text = ' ' .. title .. ' ' },
-    }
-  elseif TAB_STYLE == 'retro-pill-blue' then
-    return {
-      { Background = { Color = BG } },
-      { Foreground = { Color = '#2B3B58' } },
-      { Text = wezterm.nerdfonts.ple_left_half_circle_thick },
-      { Background = { Color = '#2B3B58' } },
-      { Foreground = { Color = '#FFFFFF' } },
-      { Text = title },
-      { Background = { Color = BG } },
-      { Foreground = { Color = '#2B3B58' } },
-      { Text = wezterm.nerdfonts.ple_right_half_circle_thick },
-    }
-  elseif TAB_STYLE == 'retro-pill' then
-    return {
-      { Background = { Color = BG } },
-      { Foreground = { Color = '#3A3A3A' } },
-      { Text = wezterm.nerdfonts.ple_left_half_circle_thick },
-      { Background = { Color = '#3A3A3A' } },
-      { Foreground = { Color = '#FFFFFF' } },
-      { Text = title },
-      { Background = { Color = BG } },
-      { Foreground = { Color = '#3A3A3A' } },
-      { Text = wezterm.nerdfonts.ple_right_half_circle_thick },
-    }
-  end
-  -- fancy-white
   return { { Foreground = { Color = '#FFFFFF' } }, { Text = ' ' .. title .. ' ' } }
 end)
 
@@ -188,7 +109,7 @@ config.colors = {
   brights = { '#4E5157', '#FF6B7A', '#67FF59', '#FFEC1A',
               '#3399FF', '#D970FF', '#40FFE9', '#FFFFFF' },
   -- IntelliJ-style: strip == terminal bg, tabs flat on it; the active-tab
-  -- marking comes from format-tab-title above (see TAB_STYLE).
+  -- marking comes from the steel-blue TAB_TINT fill + format-tab-title above.
   tab_bar = {
     background = BG,
     -- If the fill ever stops painting, emit it as the FIRST item from the
@@ -221,8 +142,7 @@ config.tab_bar_style = {
     { Foreground = { Color = '#CCCCCC' } }, { Text = '  ＋  ' },
   },
 }
-config.use_fancy_tab_bar = TAB_STYLE:sub(1, 5) ~= 'retro'
-config.tab_bar_at_bottom = TAB_STYLE == 'retro-bottom'
+config.use_fancy_tab_bar = true
 config.window_decorations = 'INTEGRATED_BUTTONS|RESIZE'
 config.hide_tab_bar_if_only_one_tab = false -- the bar hosts the window buttons
 config.tab_max_width = 32 -- default 16 truncates Claude session titles
