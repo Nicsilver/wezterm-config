@@ -1,13 +1,13 @@
 # wezterm-config
 
-My WezTerm setup. Dark single-surface theme (`#121212` everywhere: terminal, tab strip, titlebar), ANSI palette synced from my IntelliJ color scheme, steel-blue active tab, and tab titles that show the shell's folder name instead of `pwsh.exe`.
-
-Windows config for now; the mac variant lands here later.
+My WezTerm setup. Dark single-surface theme (terminal, tab strip and titlebar all one color: `#121212` on Windows, `#202020` on the Mac to match IntelliJ), ANSI palette synced from my IntelliJ color scheme, steel-blue active tab, and tab titles that show the shell's folder name instead of `pwsh.exe`.
 
 ## Layout
 
 - `windows/wezterm.lua` goes to `%USERPROFILE%\.wezterm.lua`
 - `windows/make_dim_font.py` generates the "Cascadia Mono Dim" font that the dim-text setup needs (see below)
+- `mac/wezterm.lua` goes to `~/.wezterm.lua`
+- `mac/make-cascadia-dim.py` is the mac variant of the dim-font generator
 
 ## Install (Windows)
 
@@ -23,6 +23,24 @@ Windows config for now; the mac variant lands here later.
    ```
 
 4. Start WezTerm. `wezterm ls-fonts` should print "Will synthesize dim" under `When Intensity=Half`.
+
+## Install (macOS)
+
+1. Install a WezTerm nightly. The upstream `wezterm@nightly` cask can fail its install step on APFS; if it does, install from a locally patched copy of the cask.
+2. Copy `mac/wezterm.lua` to `~/.wezterm.lua`.
+3. Generate the dim font:
+
+   ```
+   pip install fonttools
+   mkdir -p ~/.wezterm-fonts
+   cp mac/make-cascadia-dim.py ~/.wezterm-fonts/
+   python3 ~/.wezterm-fonts/make-cascadia-dim.py
+   ```
+
+4. Copy the titlebar font: `cp /System/Library/Fonts/SFNS.ttf ~/.wezterm-fonts/`. WezTerm's CoreText locator can't select hidden system fonts by name, so the config picks up this copy (family "System Font") via `font_dirs` instead.
+5. Start WezTerm. `wezterm ls-fonts` should print "Will synthesize dim" under `When Intensity=Half`.
+
+Note the mac config binds no Ctrl+V: paste is handled outside wezterm (a Hammerspoon smart-paste tap sends Cmd+V for text and passes raw ^V through for images, which is what keeps Claude Code's image paste working).
 
 ## Why the weird bits exist
 
