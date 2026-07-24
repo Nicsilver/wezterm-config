@@ -143,7 +143,7 @@ config.colors = {
     inactive_tab_hover = { bg_color = BG_HOVER, fg_color = '#CCCCCC' },
     new_tab = { bg_color = BG, fg_color = '#8A8A90' },
     new_tab_hover = { bg_color = BG_HOVER, fg_color = '#CCCCCC' },
-    inactive_tab_edge = BG, -- no divider lines
+    inactive_tab_edge = '#32323A', -- hairline dividers between tabs
   },
 }
 

@@ -18,8 +18,10 @@ function M.apply(config)
     -- fonts by name, so ~/.wezterm-fonts holds a copy of
     -- /System/Library/Fonts/SFNS.ttf (family "System Font") that the FontDirs
     -- locator picks up.
-    font = wezterm.font { family = 'System Font', weight = 'Regular' },
-    font_size = 13.0,
+    -- Medium + 14pt: slightly bolder tab labels, and the fancy bar's height
+    -- follows this font size (wezterm#3789), so this is also the height knob.
+    font = wezterm.font { family = 'System Font', weight = 'Medium' },
+    font_size = 14.0,
     active_titlebar_bg = M.bg, inactive_titlebar_bg = M.bg,
   }
 
