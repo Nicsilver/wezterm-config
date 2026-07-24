@@ -21,19 +21,38 @@ wezterm.add_to_config_reload_watch_list(here .. platform_file)
 local BG = platform.bg
 local BG_HOVER = platform.bg_hover
 
--- Tab look. 'fancy-steel' is the original native-bar steel-blue (keeps per-tab
--- ✕ buttons); every other style renders on the retro bar, where there are no
--- ✕ buttons — middle-click a tab to close it. Ctrl+Shift+S cycles styles live;
--- the pick sticks across config reloads via wezterm.GLOBAL and falls back to
--- the default below on app restart.
+-- Tab look — every style runs on the FANCY bar (native tab height + per-tab
+-- ✕ buttons). The shaped retro pack is parked in git history (2ce5458) until
+-- the wezterm fork adds retro bar height (upstream said not-planned, #3077).
+-- The fancy bar renders colors from format-tab-title but ignores
+-- bold/italic/underline. Ctrl+Shift+S cycles styles live; the pick sticks
+-- across config reloads via wezterm.GLOBAL and falls back to the default
+-- below on app restart.
 local STYLE_ORDER = {
-  'powerline', 'pill', 'capsules', 'slant', 'gradient', 'hash',
-  'circled', 'iconid', 'chevron', 'underline', 'block', 'matrix',
-  'fancy-steel',
+  'steel', 'slate', 'mauve', 'amber', 'green', 'crimson',
+  'accent', 'index', 'circled', 'iconid', 'hash', 'gradient',
 }
-local TAB_STYLE = wezterm.GLOBAL.tab_style or 'powerline'
--- Steel-blue fill for the fancy-steel active tab.
-local TAB_TINT = '#2B3B58'
+local TAB_STYLE = 'steel'
+-- GLOBAL can hold a style name from an older roster (e.g. the retro pack);
+-- only honor it if it still exists.
+for _, name in ipairs(STYLE_ORDER) do
+  if name == wezterm.GLOBAL.tab_style then
+    TAB_STYLE = name
+  end
+end
+
+-- Solid-fill styles recolor the native active chip via colors.tab_bar below;
+-- glyph/dynamic styles leave the chip on BG and paint inside the title.
+local FILLS = {
+  steel   = { bg = '#2B3B58', fg = '#FFFFFF' },
+  slate   = { bg = '#3A3A42', fg = '#FFFFFF' },
+  mauve   = { bg = '#C6A0F6', fg = '#181926' },
+  amber   = { bg = '#D97706', fg = '#141414' },
+  green   = { bg = '#39D353', fg = '#0D1117' },
+  crimson = { bg = '#7D2A35', fg = '#FFFFFF' },
+  accent  = { bg = '#2B3B58', fg = '#FFFFFF' },
+}
+local ACTIVE = FILLS[TAB_STYLE] or { bg = BG, fg = '#FFFFFF' }
 
 -- Bare shell titles say nothing; the tab shows the shell's folder instead.
 -- One combined set for both platforms — a fresh pwsh tab reports 'pwsh.exe'
@@ -80,115 +99,71 @@ local function contrast_fg(color)
   return lightness > 55 and '#000000' or '#FFFFFF'
 end
 
-local nf = wezterm.nerdfonts
-
--- Retro style renderers. Each takes (tab, tabs, hover, title) and returns
--- format items; title arrives pre-truncated.
+-- Style renderers. Each takes (tab, tabs, hover, title) and returns format
+-- items; title arrives pre-truncated (with the unseen-output dot already
+-- prefixed on background tabs). Inactive tabs return bare text wherever
+-- possible: explicit colors pin the tab and kill wezterm's native hover
+-- repaint (wezterm#5164, #3481) — iconid/hash/gradient knowingly trade that.
 local STYLES = {}
 
--- folke/dot: one continuous strip, solid powerline arrows hugging the active
--- tab, thin dividers between inactive neighbors.
-STYLES['powerline'] = function(tab, tabs, _, title)
-  local active_bg, inactive_bg = '#2B3B58', '#2A2A30'
-  local bg = tab.is_active and active_bg or inactive_bg
-  local fg = tab.is_active and '#FFFFFF' or '#9A9AA2'
-  local next_tab = tabs[tab.tab_index + 2]
-  local is_last = tab.tab_index == #tabs - 1
-  local items = {}
-  if tab.is_active then
-    items[#items + 1] = { Attribute = { Intensity = 'Bold' } }
-    items[#items + 1] = { Attribute = { Italic = true } }
-  end
-  items[#items + 1] = { Background = { Color = bg } }
-  items[#items + 1] = { Foreground = { Color = fg } }
-  items[#items + 1] = { Text = ' ' .. title .. ' ' }
-  if tab.is_active or is_last or (next_tab and next_tab.is_active) then
-    local right_bg = BG
-    if not is_last then
-      right_bg = next_tab.is_active and active_bg or inactive_bg
-    end
-    items[#items + 1] = { Background = { Color = right_bg } }
-    items[#items + 1] = { Foreground = { Color = bg } }
-    items[#items + 1] = { Text = nf.pl_left_hard_divider }
-  else
-    items[#items + 1] = { Background = { Color = inactive_bg } }
-    items[#items + 1] = { Foreground = { Color = '#4A4A52' } }
-    items[#items + 1] = { Text = nf.pl_left_soft_divider }
-  end
-  return items
-end
-
--- dragonlobster: only the active tab becomes a rounded mauve chip.
-STYLES['pill'] = function(tab, _, hover, title)
-  local label = (tab.tab_index + 1) .. ': ' .. title
+-- Solid chip recolors: the native chip fill comes from colors.tab_bar (see
+-- FILLS); the handler only needs to keep the text legible on it.
+local function fill_style(tab, _, _, title)
   if not tab.is_active then
-    return {
-      { Foreground = { Color = hover and '#CCCCCC' or '#8A8A90' } },
-      { Text = '  ' .. label .. '  ' },
-    }
+    return { { Text = ' ' .. title .. ' ' } }
   end
-  local fill = '#C6A0F6'
-  return {
-    { Background = { Color = BG } },
-    { Foreground = { Color = fill } },
-    { Text = ' ' .. nf.ple_left_half_circle_thick },
-    { Background = { Color = fill } },
-    { Foreground = { Color = '#181926' } },
-    { Text = label },
-    { Background = { Color = BG } },
-    { Foreground = { Color = fill } },
-    { Text = nf.ple_right_half_circle_thick .. ' ' },
-  }
+  return { { Foreground = { Color = ACTIVE.fg } }, { Text = ' ' .. title .. ' ' } }
+end
+for name in pairs(FILLS) do
+  STYLES[name] = fill_style
 end
 
--- KevinSilvester: every tab a detached capsule; unseen output shows as an
--- orange count badge inside the pill.
-STYLES['capsules'] = function(tab, _, _, title)
-  local fill = tab.is_active and '#89B4FA' or '#45475A'
-  local fg = tab.is_active and '#11111B' or '#CDD6F4'
-  local items = {
-    { Background = { Color = BG } },
-    { Foreground = { Color = fill } },
-    { Text = ' ' .. nf.ple_left_half_circle_thick },
-    { Background = { Color = fill } },
-    { Foreground = { Color = fg } },
-    { Text = title },
-  }
-  local n = 0
-  for _, p in ipairs(tab.panes) do
-    if p.has_unseen_output then
-      n = n + 1
-    end
+-- Steel chip plus a bright edge bar at the start of the active tab.
+STYLES['accent'] = function(tab, _, _, title)
+  if not tab.is_active then
+    return { { Text = ' ' .. title .. ' ' } }
   end
-  if n > 0 then
-    items[#items + 1] = { Foreground = { Color = '#FFA066' } }
-    items[#items + 1] =
-      { Text = ' ' .. (nf['md_numeric_' .. math.min(n, 10) .. '_circle'] or tostring(n)) }
-  end
-  items[#items + 1] = { Background = { Color = BG } }
-  items[#items + 1] = { Foreground = { Color = fill } }
-  items[#items + 1] = { Text = nf.ple_right_half_circle_thick .. ' ' }
-  return items
-end
-
--- mozumasu (Zenn): floating trapezoid chips, gold active on slate.
-STYLES['slant'] = function(tab, _, _, title)
-  local fill = tab.is_active and '#AE8B2D' or '#5C6D74'
   return {
-    { Background = { Color = BG } },
-    { Foreground = { Color = fill } },
-    { Text = ' ' .. nf.ple_lower_right_triangle },
-    { Background = { Color = fill } },
+    { Foreground = { Color = '#7FAEFF' } },
+    { Text = '▍' },
     { Foreground = { Color = '#FFFFFF' } },
-    { Text = ' ' .. title .. ' ' },
-    { Background = { Color = BG } },
-    { Foreground = { Color = fill } },
-    { Text = nf.ple_upper_left_triangle .. ' ' },
+    { Text = title .. ' ' },
+  }
+end
+
+-- No fill at all; the active tab is marked by an accent-blue index number.
+STYLES['index'] = function(tab, _, _, title)
+  local n = tostring(tab.tab_index + 1)
+  if not tab.is_active then
+    return { { Text = ' ' .. n .. '  ' .. title .. ' ' } }
+  end
+  return {
+    { Foreground = { Color = '#5594FA' } },
+    { Text = ' ' .. n .. '  ' },
+    { Foreground = { Color = '#FFFFFF' } },
+    { Text = title .. ' ' },
+  }
+end
+
+-- Circled index badges, magenta on the active tab. Unicode (not nerd-font)
+-- so it renders in the fancy bar's proportional font.
+local CIRCLED = { '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩' }
+STYLES['circled'] = function(tab, _, _, title)
+  local badge = CIRCLED[tab.tab_index + 1] or tostring(tab.tab_index + 1)
+  if not tab.is_active then
+    return { { Text = ' ' .. badge .. ' ' .. title .. ' ' } }
+  end
+  return {
+    { Foreground = { Color = '#C092FA' } },
+    { Text = ' ' .. badge .. ' ' },
+    { Foreground = { Color = '#FFFFFF' } },
+    { Text = title .. ' ' },
   }
 end
 
 -- rashil2000: tab fills sampled from one gradient across the whole strip;
--- inactive tabs get the muted version of their own stop.
+-- inactive tabs get the muted version of their own stop. Painting inactive
+-- tabs costs native hover repaint — accepted for this style.
 STYLES['gradient'] = function(tab, tabs, _, title)
   local stops = wezterm.color.gradient(
     { orientation = 'Horizontal', colors = { '#4C2A85', '#C1436D' } },
@@ -198,18 +173,16 @@ STYLES['gradient'] = function(tab, tabs, _, title)
   if not tab.is_active then
     bg = bg:desaturate(0.35):darken(0.35)
   end
-  local items = {}
-  if tab.is_active then
-    items[#items + 1] = { Attribute = { Intensity = 'Bold' } }
-  end
-  items[#items + 1] = { Background = { Color = bg } }
-  items[#items + 1] = { Foreground = { Color = contrast_fg(bg) } }
-  items[#items + 1] = { Text = ' ' .. title .. ' ' }
-  return items
+  return {
+    { Background = { Color = bg } },
+    { Foreground = { Color = contrast_fg(bg) } },
+    { Text = ' ' .. title .. ' ' },
+  }
 end
 
 -- wezterm discussion #4945: tab color is a hash of its cwd, so the same
--- project always lands on the same hue; fg picked by LAB lightness.
+-- project always lands on the same hue; fg picked by LAB lightness. Same
+-- hover trade as gradient.
 STYLES['hash'] = function(tab, _, _, title)
   local url = tab.active_pane and tab.active_pane.current_working_dir
   local path = url and (type(url) == 'string' and url or url.file_path) or title
@@ -221,50 +194,25 @@ STYLES['hash'] = function(tab, _, _, title)
   if not tab.is_active then
     bg = bg:desaturate(0.4):darken(0.3)
   end
-  local items = {}
-  if tab.is_active then
-    items[#items + 1] = { Attribute = { Intensity = 'Bold' } }
-  end
-  items[#items + 1] = { Background = { Color = bg } }
-  items[#items + 1] = { Foreground = { Color = contrast_fg(bg) } }
-  items[#items + 1] = { Text = ' ' .. title .. ' ' }
-  return items
-end
-
--- sravioli: circled index numbers that swap to a bell when a background pane
--- has unseen output.
-STYLES['circled'] = function(tab, _, _, title)
-  local i = tab.tab_index + 1
-  local unseen = not tab.is_active and has_unseen(tab)
-  local badge = unseen and nf.md_bell_badge
-    or nf['md_numeric_' .. i .. '_circle']
-    or tostring(i)
-  local badge_fg = unseen and '#E0A06A' or (tab.is_active and '#C092FA' or '#5A5A62')
-  local items = {
-    { Foreground = { Color = badge_fg } },
-    { Text = ' ' .. badge .. ' ' },
+  return {
+    { Background = { Color = bg } },
+    { Foreground = { Color = contrast_fg(bg) } },
+    { Text = ' ' .. title .. ' ' },
   }
-  if tab.is_active then
-    items[#items + 1] = { Attribute = { Intensity = 'Bold' } }
-    items[#items + 1] = { Foreground = { Color = '#FFFFFF' } }
-  else
-    items[#items + 1] = { Foreground = { Color = '#8A8A90' } }
-  end
-  items[#items + 1] = { Text = title .. ' ' }
-  return items
 end
 
--- metafates: no titles at all — each tab gets a random colored icon pinned to
--- its tab_id for the life of the process, plus its index.
+-- metafates-inspired: no titles — each tab keeps a random colored glyph for
+-- the life of the process, plus its index. Unicode so it renders in the
+-- proportional bar font; colored inactive tabs cost hover repaint — accepted.
 local ICON_IDS = {}
 local ICON_CHOICES = {
-  { nf.cod_telescope, '#47CCBD' },
-  { nf.md_ghost, '#CED0D6' },
-  { nf.md_rocket, '#F27481' },
-  { nf.md_flask, '#6BCC62' },
-  { nf.md_earth, '#5594FA' },
-  { nf.md_cat, '#E0CE70' },
-  { nf.md_skull, '#C092FA' },
+  { '✦', '#47CCBD' },
+  { '☾', '#CED0D6' },
+  { '⚑', '#F27481' },
+  { '♜', '#6BCC62' },
+  { '❖', '#5594FA' },
+  { '♠', '#E0CE70' },
+  { '☘', '#C092FA' },
 }
 STYLES['iconid'] = function(tab)
   local pick = ICON_IDS[tab.tab_id]
@@ -277,7 +225,6 @@ STYLES['iconid'] = function(tab)
     { Text = '  ' .. pick[1] .. ' ' },
   }
   if tab.is_active then
-    items[#items + 1] = { Attribute = { Intensity = 'Bold' } }
     items[#items + 1] = { Foreground = { Color = '#FFFFFF' } }
   else
     items[#items + 1] = { Foreground = { Color = '#6A6A72' } }
@@ -286,95 +233,16 @@ STYLES['iconid'] = function(tab)
   return items
 end
 
--- The official-docs classic: purple chevron wedges with a hover shade (hover
--- is reliable on the retro bar — cells are real character columns there).
-STYLES['chevron'] = function(tab, _, hover, title)
-  local bg, fg = '#1B1032', '#808080'
-  if tab.is_active then
-    bg, fg = '#2B2042', '#C0C0C0'
-  elseif hover then
-    bg, fg = '#3B3052', '#909090'
-  end
-  return {
-    { Background = { Color = BG } },
-    { Foreground = { Color = bg } },
-    { Text = nf.pl_right_hard_divider },
-    { Background = { Color = bg } },
-    { Foreground = { Color = fg } },
-    { Text = ' ' .. title .. ' ' },
-    { Background = { Color = BG } },
-    { Foreground = { Color = bg } },
-    { Text = nf.pl_left_hard_divider },
-  }
-end
-
--- Minimal: flat text, the active tab is just brighter and underlined (real
--- underline — the retro bar honors attributes, unlike fancy).
-STYLES['underline'] = function(tab, _, hover, title)
-  if tab.is_active then
-    return {
-      { Attribute = { Underline = 'Single' } },
-      { Foreground = { Color = '#FFFFFF' } },
-      { Text = ' ' .. title .. ' ' },
-    }
-  end
-  return {
-    { Foreground = { Color = hover and '#CCCCCC' or '#7A7A82' } },
-    { Text = ' ' .. title .. ' ' },
-  }
-end
-
--- Loud amber block on the active tab, everything else stays quiet.
-STYLES['block'] = function(tab, _, hover, title)
-  if tab.is_active then
-    return {
-      { Background = { Color = '#D97706' } },
-      { Foreground = { Color = '#141414' } },
-      { Attribute = { Intensity = 'Bold' } },
-      { Text = ' ' .. title .. ' ' },
-    }
-  end
-  return {
-    { Foreground = { Color = hover and '#CCCCCC' or '#8A8A90' } },
-    { Text = ' ' .. title .. ' ' },
-  }
-end
-
--- Terminal-green on near-black; active tab is inverse video with brackets.
-STYLES['matrix'] = function(tab, _, _, title)
-  if tab.is_active then
-    return {
-      { Background = { Color = '#39D353' } },
-      { Foreground = { Color = '#0D1117' } },
-      { Attribute = { Intensity = 'Bold' } },
-      { Text = ' [' .. title .. '] ' },
-    }
-  end
-  return {
-    { Background = { Color = '#0D1117' } },
-    { Foreground = { Color = '#2E9E44' } },
-    { Text = '  ' .. title .. '  ' },
-  }
-end
-
 wezterm.on('format-tab-title', function(tab, tabs, panes, conf, hover, max_width)
-  local title = compute_title(tab)
-  if TAB_STYLE == 'fancy-steel' then
-    -- The fancy bar sizes tabs itself; the cap just bounds runaway titles.
-    title = wezterm.truncate_right(title, 24)
-    if not tab.is_active then
-      -- Inactive tabs return TEXT ONLY, no colors, on purpose. Explicit colors
-      -- pin the tab and kill wezterm's native hover repaint, and the handler's
-      -- `hover` arg can't replace it: with the fancy bar that flag is computed
-      -- from character-cell columns while tabs render in the proportional
-      -- titlebar font, so it lands on the wrong tab (wezterm#5164, #3481).
-      -- Bare text styles via tab_bar.inactive_tab / inactive_tab_hover instead.
-      return { { Text = ' ' .. title .. ' ' } }
-    end
-    return { { Foreground = { Color = '#FFFFFF' } }, { Text = ' ' .. title .. ' ' } }
+  -- The fancy bar sizes tabs itself; the cap just bounds runaway titles.
+  local title = wezterm.truncate_right(compute_title(tab), 24)
+  -- Universal unseen-output marker on background tabs. Deliberately uncolored:
+  -- plain text keeps the native hover repaint alive (explicit colors pin the
+  -- tab, and `hover` can't replace it on the fancy bar — wezterm#5164, #3481).
+  if not tab.is_active and has_unseen(tab) then
+    title = '● ' .. title
   end
-  title = wezterm.truncate_right(title, max_width - 6)
-  return (STYLES[TAB_STYLE] or STYLES.powerline)(tab, tabs, hover, title)
+  return (STYLES[TAB_STYLE] or STYLES.steel)(tab, tabs, hover, title)
 end)
 
 -- Experiment aid while style-shopping: name the current style bottom-right.
@@ -428,15 +296,13 @@ config.colors = {
   brights = { '#4E5157', '#FF6B7A', '#67FF59', '#FFEC1A',
               '#3399FF', '#D970FF', '#40FFE9', '#FFFFFF' },
   -- IntelliJ-style: strip == terminal bg, tabs flat on it; the active-tab
-  -- marking comes from the steel-blue TAB_TINT fill + format-tab-title above.
+  -- marking comes from the selected style's chip fill + format-tab-title.
   tab_bar = {
     background = BG,
     -- If the fill ever stops painting, emit it as the FIRST item from the
     -- format-tab-title handler instead — bg_color here can silently lose to
     -- a registered handler for some styles.
-    -- No underline here: the retro bar merges these base attributes under
-    -- every format-tab-title style (fancy ignored it).
-    active_tab = { bg_color = TAB_TINT, fg_color = '#FFFFFF' },
+    active_tab = { bg_color = ACTIVE.bg, fg_color = ACTIVE.fg },
     inactive_tab = { bg_color = BG, fg_color = '#8A8A90' },
     inactive_tab_hover = { bg_color = BG_HOVER, fg_color = '#CCCCCC' },
     new_tab = { bg_color = BG, fg_color = '#8A8A90' },
@@ -463,7 +329,7 @@ config.tab_bar_style = {
     { Foreground = { Color = '#CCCCCC' } }, { Text = '  ＋  ' },
   },
 }
-config.use_fancy_tab_bar = TAB_STYLE == 'fancy-steel'
+config.use_fancy_tab_bar = true
 config.window_decorations = 'INTEGRATED_BUTTONS|RESIZE'
 config.hide_tab_bar_if_only_one_tab = false -- the bar hosts the window buttons
 config.tab_max_width = 32 -- default 16 truncates Claude session titles
