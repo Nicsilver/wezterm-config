@@ -25,12 +25,6 @@ function M.apply(config)
     active_titlebar_bg = M.bg, inactive_titlebar_bg = M.bg,
   }
 
-  config.skip_close_confirmation_for_processes_named = {
-    'bash', 'sh', 'zsh', 'fish', 'tmux', 'nu',
-    'claude', 'node', 'npm',
-  }
-
-  -- The default Cmd+W passes confirm=true regardless of window_close_confirmation.
   table.insert(config.keys,
     { key = 'w', mods = 'CMD', action = act.CloseCurrentTab { confirm = false } })
   table.insert(config.keys,

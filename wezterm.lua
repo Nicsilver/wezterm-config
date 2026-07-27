@@ -148,11 +148,15 @@ config.colors = {
 }
 
 config.window_close_confirmation = 'NeverPrompt'
--- The tab ✕'s "Really kill this tab" overlay is governed ONLY by the
--- skip_close_confirmation list (set per platform) — NeverPrompt doesn't cover
--- it, and setting the list REPLACES wezterm's defaults, so each platform
--- re-lists its stock shells plus what actually runs in these tabs (Claude
--- Code runs as a node binary / claude.exe).
+-- NeverPrompt only covers closing a window. The tab ✕'s "Really kill this tab"
+-- overlay asks the mux whether anything in the pane's process tree is
+-- "stateful", which walks EVERY descendant against
+-- skip_close_confirmation_for_processes_named — unwinnable when Claude Code
+-- shells out to arbitrary tools. This hook short-circuits that walk (a false
+-- here beats the name list), so tabs just close.
+wezterm.on('mux-is-process-stateful', function()
+  return false
+end)
 
 -- Bigger, padded new-tab button; the fancy bar does honor tab_bar_style for
 -- this, and fullwidth ＋ reads noticeably larger than the stock + at the same
@@ -192,9 +196,6 @@ config.keys = {
         window:perform_action(act.SendKey { key = 'c', mods = 'CTRL' }, pane)
       end
     end) },
-
-  -- The default Ctrl+Shift+W hardcodes confirm=true and ignores NeverPrompt
-  { key = 'w', mods = 'CTRL|SHIFT', action = act.CloseCurrentTab { confirm = false } },
 
   -- Browser-style tab keys. These shadow the control chars in every pane:
   -- Ctrl+T never reaches terminal apps (Claude Code's todo toggle, bash

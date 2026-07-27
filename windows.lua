@@ -42,11 +42,6 @@ function M.apply(config)
     active_titlebar_bg = M.bg, inactive_titlebar_bg = M.bg,
   }
 
-  config.skip_close_confirmation_for_processes_named = {
-    'cmd.exe', 'pwsh.exe', 'powershell.exe',
-    'claude.exe', 'node.exe', 'npm.exe',
-  }
-
   table.insert(config.keys,
     { key = 'v', mods = 'CTRL', action = act.PasteFrom 'Clipboard' })
   -- Split pane (was DuplicatePaneAuto in Windows Terminal)
