@@ -42,6 +42,14 @@ function M.apply(config)
     active_titlebar_bg = M.bg, inactive_titlebar_bg = M.bg,
   }
 
+  -- The shared Ctrl+T (SpawnTab) inherits the focused pane's cwd, and a Claude
+  -- Code pane reports its tool shell's temp scratch dir, not the repo.
+  for _, k in ipairs(config.keys) do
+    if k.key == 't' and k.mods == 'CTRL' then
+      k.action = act.SpawnCommandInNewTab { cwd = config.default_cwd }
+    end
+  end
+
   table.insert(config.keys,
     { key = 'v', mods = 'CTRL', action = act.PasteFrom 'Clipboard' })
   -- Split pane (was DuplicatePaneAuto in Windows Terminal)
