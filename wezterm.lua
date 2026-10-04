@@ -41,7 +41,14 @@ local BARE_SHELLS = {
 
 local function compute_title(tab)
   local title = tab.tab_title
-  if not title or #title == 0 then
+  if title and #title > 0 then
+    -- A manual tab name would otherwise hide Claude Code's busy/status glyph,
+    -- which lives at the front of the pane title.
+    local glyph = (tab.active_pane.title or ''):match('^(%S+)%s')
+    if glyph and not glyph:find('%w') then
+      title = glyph .. ' ' .. title
+    end
+  else
     title = tab.active_pane.title or ''
     if BARE_SHELLS[title:lower()] then
       local url = tab.active_pane.current_working_dir
@@ -205,6 +212,17 @@ config.keys = {
 
   { key = 'LeftArrow', mods = 'ALT', action = act.ActivateTabRelative(-1) },
   { key = 'RightArrow', mods = 'ALT', action = act.ActivateTabRelative(1) },
+
+  -- Empty input clears the name and falls back to the automatic title.
+  { key = 'e', mods = 'CTRL|SHIFT',
+    action = act.PromptInputLine {
+      description = 'Tab name (empty = automatic)',
+      action = wezterm.action_callback(function(window, pane, line)
+        if line then
+          window:active_tab():set_title(line)
+        end
+      end),
+    } },
 
   -- Detach the current tab into its own window (no mouse tear-off upstream:
   -- wezterm#549). Moves the focused PANE, which equals the tab as long as the
